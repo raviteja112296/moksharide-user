@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "786771240790",
+    "project_id": "moksha-ride-87b7e",
+    "storage_bucket": "moksha-ride-87b7e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:786771240790:android:b8f753f01a586f86e758f7",
+        "android_client_info": {
+          "package_name": "com.example.moksharide_user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "786771240790-2tjvs9lg573uvk5gcndftdcdl4d5t4cs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.moksharide_user",
+            "certificate_hash": "bc223d62230458cd8cc5559b1a518e4a2e489138"
+          }
+        },
+        {
+          "client_id": "786771240790-00k60ham3m54an8bbdl5ot818k5gpf7a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAofkjfcFFiSgWcBtYGYd0C2zsGnKJgyYs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "786771240790-00k60ham3m54an8bbdl5ot818k5gpf7a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
