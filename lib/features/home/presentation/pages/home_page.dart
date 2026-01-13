@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:moksharide_user/features/ride/data/ride_repository.dart';
 import 'package:moksharide_user/services/fcm_service.dart';
 import '../../../../core/utils/app_routes.dart';
@@ -17,8 +19,10 @@ class _HomePageState extends State<HomePage> {
   final AuthService _authService = AuthService();
   final RideRepository _rideRepository = RideRepository();
   final FCMService _fcmService = FCMService();
+
   final TextEditingController _pickupController = TextEditingController();
   final TextEditingController _dropController = TextEditingController();
+
   bool _showPickupInput = false;
   String? _dropLocation;
 
@@ -27,7 +31,11 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _fcmService.initFCM();
   }
-Future<void> _setCurrentPickupLocation() async {
+
+  /* ---------------- LOGIC METHODS (UNCHANGED) ---------------- */
+  // ALL YOUR EXISTING METHODS ARE KEPT AS-IS
+  // _setCurrentPickupLocation()
+  Future<void> _setCurrentPickupLocation() async {
   try {
     // Check if location services ON
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -68,9 +76,8 @@ Future<void> _setCurrentPickupLocation() async {
     _showSnack('GPS signal weak. Try again or enter manually');
   }
 }
-
-
-  Future<void> _showDropoffLocations(BuildContext context) async {
+  // _showDropoffLocations()
+    Future<void> _showDropoffLocations(BuildContext context) async {
     final locations = [
       {'name': 'Tempo Stand, Chintamani', 'distance': '2.5 km', 'fare': '₹35'},
       {'name': 'Hospital Road', 'distance': '3.8 km', 'fare': '₹55'},
@@ -114,8 +121,8 @@ Future<void> _setCurrentPickupLocation() async {
       });
     }
   }
-
-  Future<void> _bookRide() async {
+  // _bookRide()
+    Future<void> _bookRide() async {
     if (_pickupController.text.isEmpty || _dropController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -169,7 +176,7 @@ Future<void> _setCurrentPickupLocation() async {
       }
     }
   }
-
+  // _showSnack()
   void _showSnack(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -183,87 +190,114 @@ Future<void> _setCurrentPickupLocation() async {
     }
   }
 
+  /* ---------------- UI ---------------- */
+
   @override
   Widget build(BuildContext context) {
-    final User? user = _authService.currentUser;
-    final String userEmail = user?.email ?? 'Unknown';
+    final user = _authService.currentUser;
+    final userEmail = user?.email ?? 'Unknown';
 
     return Scaffold(
       body: Stack(
         children: [
-          /// Gradient Background
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.green.shade400,
-                  Colors.green.shade700,
-                  Colors.blue.shade600,
-                ],
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.location_on,
-                size: 80,
-                color: Colors.white70,
-              ),
-            ),
-          ),
+          /// 🗺️ MAP BACKGROUND (OSM-like look)
+          /// /// 🗺️ MAP BACKGROUND (OpenStreetMap)
+FlutterMap(
+  options: const MapOptions(
+    initialCenter: LatLng(12.9716, 77.5946), // default center
+    initialZoom: 14,
+    interactionOptions: InteractionOptions(
+      flags: InteractiveFlag.drag |
+          InteractiveFlag.pinchZoom |
+          InteractiveFlag.doubleTapZoom,
+    ),
+  ),
+  children: [
+    /// OSM tiles
+    TileLayer(
+      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      userAgentPackageName: 'com.moksharide.user',
+    ),
 
-          /// TOP LOCATION SEARCH
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 60,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          // Pickup - Direct TextField or placeholder
-                          _pickupLocationField(),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: () => _showDropoffLocations(context),
-                            child: _locationField(
-                              icon: Icons.flag,
-                              iconColor: Colors.red,
-                              hint: _dropLocation ?? "Select drop-off (fare shown)",
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-                      child: CircleAvatar(
-                        radius: 24,
-                        backgroundImage: user?.photoURL != null 
-                            ? NetworkImage(user!.photoURL!) 
-                            : null,
-                        child: user?.photoURL == null 
-                            ? const Icon(Icons.person, size: 28)
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    /// Center marker (pickup)
+    MarkerLayer(
+      markers: [
+        Marker(
+          point: LatLng(12.9716, 77.5946),
+          width: 50,
+          height: 50,
+          child: const Icon(
+            Icons.location_pin,
+            size: 48,
+            color: Colors.green,
           ),
+        ),
+      ],
+    ),
+  ],
+),
 
-          /// CURRENT LOCATION BUTTON
+          /// 🔍 SEARCH CARD
+          /// 🔍 SEARCH + PROFILE
+/// 🔍 SEARCH + PROFILE (CENTER-RIGHT)
+Positioned(
+  top: MediaQuery.of(context).padding.top + 16,
+  left: 16,
+  right: 16,
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.center, // 🔥 IMPORTANT
+    children: [
+      /// SEARCH FIELDS
+      Expanded(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _pickupSearchBar(),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => _showDropoffLocations(context),
+              child: _dropSearchBar(),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 12),
+
+      /// 👤 PROFILE ICON — CENTERED
+      Align(
+        alignment: Alignment.center,
+        child: GestureDetector(
+          onTap: () =>
+              Navigator.pushNamed(context, AppRoutes.profile),
+          child: CircleAvatar(
+            radius: 25,
+            backgroundColor: Colors.white,
+            backgroundImage: _authService.currentUser?.photoURL != null
+                ? NetworkImage(
+                    _authService.currentUser!.photoURL!,
+                  )
+                : null,
+            child: _authService.currentUser?.photoURL == null
+                ? const Icon(
+                    Icons.person,
+                    size: 26,
+                    color: Colors.black87,
+                  )
+                : null,
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+
+
+
+          /// 📍 MY LOCATION BUTTON
           Positioned(
-            bottom: 240,
             right: 16,
+            bottom: 260,
             child: FloatingActionButton(
               mini: true,
               backgroundColor: Colors.white,
@@ -272,85 +306,58 @@ Future<void> _setCurrentPickupLocation() async {
             ),
           ),
 
-          /// BOTTOM SHEET
+          /// ⬆️ BOTTOM SHEET
           DraggableScrollableSheet(
             initialChildSize: 0.38,
             minChildSize: 0.25,
             maxChildSize: 0.7,
-            builder: (context, scrollController) {
+            builder: (_, controller) {
               return Container(
                 padding: const EdgeInsets.all(20),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [
-                    BoxShadow(blurRadius: 20, color: Colors.black26),
-                  ],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: ListView(
-                  controller: scrollController,
+                  controller: controller,
                   children: [
-                    /// Welcome Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back!',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade800,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(Icons.email, size: 18, color: Colors.green.shade600),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  userEmail,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.green.shade700,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                    /// WELCOME
+                    Text(
+                      "Welcome back 👋",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade800,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      userEmail,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 14,
+                      ),
+                    ),
+
                     const SizedBox(height: 24),
 
-                    /// BOOK RIDE BUTTON
-                    FilledButton(
+                    /// BOOK BUTTON
+                    ElevatedButton(
                       onPressed: _bookRide,
-                      style: FilledButton.styleFrom(
+                      style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         backgroundColor: Colors.green.shade600,
-                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        elevation: 4,
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.directions_car, size: 20),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'BOOK RIDE NOW',
+                          Icon(Icons.directions_car),
+                          SizedBox(width: 10),
+                          Text(
+                            "BOOK RIDE",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -359,9 +366,10 @@ Future<void> _setCurrentPickupLocation() async {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 24),
 
-                    /// Services
+                    /// SERVICES
                     Row(
                       children: [
                         Expanded(
@@ -391,141 +399,99 @@ Future<void> _setCurrentPickupLocation() async {
     );
   }
 
-  // 🚕 Direct Pickup TextField
-  Widget _pickupLocationField() {
+  /* ---------------- SEARCH BARS ---------------- */
+
+  Widget _pickupSearchBar() {
+    return _searchContainer(
+      child: TextField(
+        controller: _pickupController,
+        autofocus: _showPickupInput,
+        decoration: const InputDecoration(
+          hintText: "Pickup location",
+          border: InputBorder.none,
+        ),
+      ),
+      leadingColor: Colors.green,
+    );
+  }
+
+  Widget _dropSearchBar() {
+    return _searchContainer(
+      child: Text(
+        _dropLocation ?? "Drop location",
+        style: TextStyle(
+          color: _dropLocation == null ? Colors.grey : Colors.black,
+          fontSize: 15,
+        ),
+      ),
+      leadingColor: Colors.red,
+      trailing: Icons.arrow_drop_down,
+    );
+  }
+
+  Widget _searchContainer({
+    required Widget child,
+    required Color leadingColor,
+    IconData? trailing,
+  }) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 10,
+            height: 10,
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: leadingColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.circle_outlined, color: Colors.green, size: 20),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: _showPickupInput
-                ? TextField(
-                    controller: _pickupController,
-                    autofocus: true,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Enter your pickup location...',
-                      hintStyle: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 15,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                  )
-                : Text(
-                    'Tap My Location or type pickup',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-          ),
+          Expanded(child: child),
+          if (trailing != null)
+            Icon(trailing, color: Colors.grey),
         ],
       ),
     );
   }
 
-  Widget _locationField({
-    required IconData icon,
-    required Color iconColor,
-    required String hint,
-  }) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              hint,
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const Icon(Icons.arrow_drop_down, color: Colors.grey),
-        ],
-      ),
-    );
-  }
+  /* ---------------- SERVICES ---------------- */
 
   Widget _serviceItem({
     required IconData icon,
     required String label,
     required Color color,
   }) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$label service selected'),
-            backgroundColor: color.withOpacity(0.2),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 32, color: color),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
