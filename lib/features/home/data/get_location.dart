@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 Future<void> _getCurrentLocation() async {
     try {

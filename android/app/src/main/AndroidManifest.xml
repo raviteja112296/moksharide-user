@@ -9,7 +9,8 @@
     <application
         android:name="${applicationName}"
         android:label="moksharide_user"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
         <!-- 🔔 Firebase Messaging Service -->
         <service

@@ -3,9 +3,7 @@ import 'package:moksharide_user/features/ride/presentation/ride_history_screen.d
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/signin_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
-import '../../features/map/presentation/pages/map_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
-import '../../features/ride/presentation/pages/ride_status_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -25,7 +23,7 @@ class AppRoutes {
         splash: (context) => const SplashPage(),
         signIn: (context) => const SignInPage(),
         home: (context) => const HomePage(),
-        map: (context) => MapPage(),
+        // map: (context) => MapPage(),
         profile: (context) => const ProfilePage(),
         rideHistory: (context) => const RideHistoryScreen(),
 

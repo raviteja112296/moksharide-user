@@ -49,7 +49,7 @@ class AuthService {
       }
 
       return user;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       // Re-throw Firebase auth exceptions
       rethrow;
     } catch (e) {
@@ -84,5 +84,6 @@ class AuthService {
   /// Returns a stream of authentication state changes
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 }
+
 
 

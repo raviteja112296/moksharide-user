@@ -6,7 +6,7 @@ import '../../../../core/fare_calculator.dart';
 class RideStatusScreen extends StatefulWidget {
   final String rideId;
   
-  const RideStatusScreen({Key? key, required this.rideId}) : super(key: key);
+  const RideStatusScreen({super.key, required this.rideId});
 
   @override
   State<RideStatusScreen> createState() => _RideStatusScreenState();
@@ -38,7 +38,7 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
-          final status = data['status'] ?? 'pending';
+          final status = data['status'] ?? 'requested';
 
           return Padding(
             padding: const EdgeInsets.all(20.0),
@@ -121,8 +121,8 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
 
                 const Spacer(),
 
-                // Cancel Button (Pending only)
-                if (status == 'pending')
+                // Cancel Button (requstesd only)
+                if (status == 'requested')
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: SizedBox(
@@ -164,7 +164,7 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'pending': return Icons.hourglass_empty;
+      case 'requested': return Icons.hourglass_empty;
       case 'accepted': return Icons.directions_car;
       case 'completed': return Icons.check_circle;
       default: return Icons.help_outline;
@@ -173,7 +173,7 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'pending': return Colors.orange;
+      case 'requested': return Colors.orange;
       case 'accepted': return Colors.green;
       case 'completed': return Colors.green;
       default: return Colors.grey;
@@ -182,7 +182,7 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
 
   String _getStatusText(String status) {
     switch (status) {
-      case 'pending': return 'Searching for drivers nearby...';
+      case 'requested': return 'Searching for drivers nearby...';
       case 'accepted': return 'Driver has accepted your ride!';
       case 'completed': return 'Ride completed successfully!';
       default: return 'Ride status: $status';
