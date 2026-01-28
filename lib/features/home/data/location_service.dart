@@ -1,5 +1,6 @@
 import 'package:geocoding/geocoding.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+// import 'package:latlong2/latlong.dart';
 
 class LocationService {
   static Future<LatLng?> getLatLngFromAddress(String address) async {

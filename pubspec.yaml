@@ -40,13 +40,15 @@ dependencies:
   shared_preferences: ^2.5.4
   cloud_firestore: ^6.1.1
   google_maps_flutter: ^2.14.0
-  latlong2: ^0.9.1
   firebase_messaging: ^16.1.0
   http: ^1.6.0
   flutter_local_notifications: ^19.5.0
   geolocator: ^14.0.2
-  flutter_map: ^8.2.2
   geocoding: ^4.0.0
+  uuid: ^4.5.2
+  flutter_polyline_points: ^3.1.0
+  flutter_rating_bar: ^4.0.1
+  razorpay_flutter: ^1.4.0
   # flutter_location_search: ^2.0.0
 
 dev_dependencies:
