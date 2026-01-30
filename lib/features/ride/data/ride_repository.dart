@@ -22,6 +22,7 @@ String generateRideOtp() {
     required double dropLng,
     required String serviceType,
     required double estimatedPrice,
+    // required double distanceKm,
   }) async {
     // 🔐 AUTH CHECK
     final user = _auth.currentUser;
@@ -49,7 +50,7 @@ await rideRef.set({
 
   'serviceType': serviceType,
   'estimatedPrice': estimatedPrice,
-
+  // 'distanceKm':distanceKm,
   /// 🔐 OTP (IMPORTANT)
   'rideOtp': rideOtp,
   'otpVerified': false,

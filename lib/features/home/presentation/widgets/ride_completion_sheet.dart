@@ -53,7 +53,7 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
 
   void _startRazorpay() {
     var options = {
-      'key': 'YOUR_RAZORPAY_KEY_HERE', // Replace with your Test Key
+      'key': 'rzp_test_YXemoshVoIu50O', // Replace with your Test Key
       'amount': (widget.amount * 100).toInt(), // Amount in paise
       'name': 'Moksha Ride',
       'description': 'Ride Payment',

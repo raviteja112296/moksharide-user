@@ -33,9 +33,9 @@ class RideHistoryScreen extends StatelessWidget {
 
               return ListTile(
                 leading: const Icon(Icons.local_taxi),
-                title: Text('${data['pickup']} → ${data['dropoff']}'),
+                title: Text('${data['pickupAddress']} → ${data['dropAddress']}'),
                 subtitle: Text(
-                  '₹${data['price']} • ${data['status']}',
+                  '₹${data['estimatedPrice']} • ${data['status']}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {

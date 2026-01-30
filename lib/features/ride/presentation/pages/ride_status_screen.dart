@@ -93,9 +93,9 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        _buildLocationRow('Pickup', data['pickup'] ?? '', Icons.location_on, Colors.green),
+                        _buildLocationRow('Pickup', data['pickupAddress'] ?? '', Icons.location_on, Colors.green),
                         const SizedBox(height: 16),
-                        _buildLocationRow('Dropoff', data['dropoff'] ?? '', Icons.flag, Colors.orange),
+                        _buildLocationRow('Dropoff', data['dropAddress'] ?? '', Icons.flag, Colors.orange),
                         const Divider(height: 30),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -105,7 +105,7 @@ class _RideStatusScreenState extends State<RideStatusScreen> {
                               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                             ),
                             Text(
-                              '₹${(data['price'] ?? 0).toStringAsFixed(0)}',
+                              '₹${(data['estimatedPrice'] ?? 0).toStringAsFixed(0)}',
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
