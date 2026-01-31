@@ -1,42 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // Add this package for stars
-import 'package:razorpay_flutter/razorpay_flutter.dart'; // Add for payments
+import 'package:flutter_rating_bar/flutter_rating_bar.dart'; 
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:flutter_tts/flutter_tts.dart'; // 📦 NEW: Import TTS
 
 class RideCompletionSheet extends StatefulWidget {
   final String rideId;
   final double amount;
 
   const RideCompletionSheet({
-    Key? key, 
+    super.key, 
     required this.rideId, 
     required this.amount
-  }) : super(key: key);
+  });
 
   @override
   State<RideCompletionSheet> createState() => _RideCompletionSheetState();
 }
 
 class _RideCompletionSheetState extends State<RideCompletionSheet> {
-  // 0 = Payment, 1 = Feedback, 2 = Done
+  // 0 = Payment, 1 = Feedback
   int _currentStep = 0; 
   late Razorpay _razorpay;
+  final FlutterTts _flutterTts = FlutterTts(); // 🔊 TTS Instance
 
   @override
   void initState() {
     super.initState();
+    
+    // 1. Initialize Razorpay
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+
+    // 2. 🔊 Play Initial Audio
+    _initTtsAndSpeak();
+  }
+
+  Future<void> _initTtsAndSpeak() async {
+    // Configure TTS settings
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setPitch(1.0);
+    await _flutterTts.setSpeechRate(0.5); // Slower is clearer
+
+    // 🗣️ Speak: "You reached..."
+    await _flutterTts.speak("You have reached the destination. Please complete the payment.");
   }
 
   @override
   void dispose() {
     _razorpay.clear();
+    _flutterTts.stop(); // Stop audio if user closes app
     super.dispose();
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    // Payment Successful -> Move to Feedback
     setState(() {
       _currentStep = 1; 
     });
@@ -53,13 +70,25 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
 
   void _startRazorpay() {
     var options = {
-      'key': 'rzp_test_YXemoshVoIu50O', // Replace with your Test Key
-      'amount': (widget.amount * 100).toInt(), // Amount in paise
+      'key': 'rzp_test_YXemoshVoIu50O', 
+      'amount': (widget.amount * 100).toInt(), 
       'name': 'Moksha Ride',
       'description': 'Ride Payment',
       'prefill': {'contact': '9876543210', 'email': 'test@user.com'}
     };
     _razorpay.open(options);
+  }
+
+  // 🗣️ Helper to speak "Thank you" and close
+  Future<void> _submitFeedback() async {
+    // 1. Speak "Thank you"
+    await _flutterTts.speak("Thank you for riding with Moksha ride.");
+    
+    // 2. Wait a moment for audio to start/finish (optional)
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+    Navigator.pop(context); // Close sheet
   }
 
   @override
@@ -88,8 +117,8 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _startRazorpay,
-                icon: const Icon(Icons.payment),
-                label: const Text("Pay with Razorpay"),
+                icon: const Icon(Icons.payment, color: Colors.white,),
+                label: const Text("Pay with Razorpay", style: TextStyle(color: Colors.white, fontSize: 16)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -98,10 +127,10 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
             ),
             const SizedBox(height: 12),
             
-            // Cash Button (Skip Payment logic for now)
+            // Cash Button
             TextButton(
               onPressed: () {
-                setState(() => _currentStep = 1); // Skip to feedback
+                setState(() => _currentStep = 1); 
               },
               child: const Text("Paid by Cash"),
             ),
@@ -113,13 +142,13 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
             const SizedBox(height: 10),
             const CircleAvatar(
               radius: 30,
-              backgroundImage: AssetImage('assets/images/logo.png'), // Or network image
+              // Make sure this image exists or use a NetworkImage
+              backgroundImage: AssetImage('assets/images/logo.png'), 
             ),
             const SizedBox(height: 10),
             const Text("Ravi Kumar", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             const SizedBox(height: 20),
             
-            // Star Rating (Requires flutter_rating_bar package)
             RatingBar.builder(
               initialRating: 4,
               minRating: 1,
@@ -128,7 +157,7 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
               itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
               itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
               onRatingUpdate: (rating) {
-                // Save rating logic here
+                // Save rating logic
               },
             ),
             const SizedBox(height: 20),
@@ -145,12 +174,12 @@ class _RideCompletionSheetState extends State<RideCompletionSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Close the sheet and go back to home map
-                  Navigator.pop(context); 
-                  // Reset UI state in HomePage if needed
-                },
-                child: const Text("SUBMIT"),
+                onPressed: _submitFeedback, // 🔥 Calls the Audio + Close logic
+                style: ElevatedButton.styleFrom(
+                   backgroundColor: Colors.black,
+                   padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text("SUBMIT", style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ),
           ],

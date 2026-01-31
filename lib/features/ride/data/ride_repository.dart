@@ -90,7 +90,7 @@ await rideRef.set({
       pickupLat: pickupLat,
       pickupLng: pickupLng,
       fare: estimatedPrice,
-      driverToken: driverToken,
+      // driverToken: driverToken,
     );
 
     print('📡 Notification sent to driver');
