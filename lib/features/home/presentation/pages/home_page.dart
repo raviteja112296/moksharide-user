@@ -257,6 +257,9 @@ class _HomePageState extends State<HomePage> {
         } else if (service.id == 'cab') {
           double calc = 50 + (distanceKm * 22);
           service.price = calc < 80 ? 80 : calc; 
+        }else if (service.id == 'bike') {
+          double calc = 40 + (distanceKm * 20);
+          service.price = calc < 80 ? 80 : calc; 
         }
       }
     });
@@ -380,6 +383,7 @@ class _HomePageState extends State<HomePage> {
   final List<RideService> _services = [
     RideService(id: 'auto', name: 'Auto', image: 'assets/images/auto.png', distanceKm: 0, durationMin: 0, price: 0),
     RideService(id: 'cab', name: 'Cab', image: 'assets/images/car.png', distanceKm: 0, durationMin: 0, price: 0),
+    RideService(id: 'bike ', name: 'Bike', image: 'assets/images/bike.jpg', distanceKm: 0, durationMin: 0, price: 40),
   ];
 
   Widget _serviceCard(RideService service) {
@@ -442,7 +446,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             _miniServiceIcon("Auto", 'assets/images/auto.png'),
             _miniServiceIcon("Cab", 'assets/images/car.png'),
-            // _miniServiceIcon("Bike", 'assets/images/bike.png'), // Example
+            _miniServiceIcon("Bike", 'assets/images/bike.jpg'), // Example
           ],
         ),
 
