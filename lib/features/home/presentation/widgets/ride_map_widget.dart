@@ -1,9 +1,10 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui; // 👈 Required for image resizing
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // 👈 Required for loading assets
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:moksharide_user/features/home/data/routing_service.dart';
+import 'package:moksharide_user/features/home/data/routing_service.dart'; // Ensure path is correct
 import 'package:geolocator/geolocator.dart';
 
 class RideMapWidget extends StatefulWidget {
@@ -44,15 +45,26 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
   double _prevHeading = 0.0;
   double _currentHeading = 0.0;
   
-  // 🏎️ Smooth Position Getter
+  bool _isFirstRouteLoad = true; // Prevents auto-zoom loop
+  int _progressIndex = 0; // 🆕 THE FIX: Tracks where the driver is on the route
+
+  // 🏎️ Smooth Position Getter (With Snap-to-Road Magic)
   LatLng get _animatedDriverLoc {
+    LatLng rawPos;
     if (_prevDriverLoc == null || _currentDriverLoc == null) {
-      return widget.driverLatLng ?? widget.initialCenter;
+      rawPos = widget.driverLatLng ?? widget.initialCenter;
+    } else {
+      rawPos = LatLng(
+        _prevDriverLoc!.latitude + (_currentDriverLoc!.latitude - _prevDriverLoc!.latitude) * _animController.value,
+        _prevDriverLoc!.longitude + (_currentDriverLoc!.longitude - _prevDriverLoc!.longitude) * _animController.value,
+      );
     }
-    return LatLng(
-      _prevDriverLoc!.latitude + (_currentDriverLoc!.latitude - _prevDriverLoc!.latitude) * _animController.value,
-      _prevDriverLoc!.longitude + (_currentDriverLoc!.longitude - _prevDriverLoc!.longitude) * _animController.value,
-    );
+
+    // Snap to route if available
+    if (_routePoints.isNotEmpty) {
+      return _getProjectedPointOnPolyline(rawPos, _routePoints);
+    }
+    return rawPos;
   }
 
   // 🔄 Smooth Rotation Getter
@@ -66,13 +78,17 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _loadAutoIcon(); // 🔥 Load the custom Auto symbol
+    _loadAutoIcon();
 
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2), 
     )..addListener(() {
-      setState(() {}); // Rebuild map frame-by-frame
+      setState(() {
+        if (_mapController != null && widget.driverLatLng != null) {
+          _updateCameraSmoothly(_animatedDriverLoc);
+        }
+      }); 
     });
   }
 
@@ -80,23 +96,17 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
   void didUpdateWidget(covariant RideMapWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 1. Fetch Route Logic (UPDATED for your requirements)
+    // 1. Fetch Route Logic
     if (widget.pickupLatLng != oldWidget.pickupLatLng || 
         widget.dropLatLng != oldWidget.dropLatLng ||
-        widget.driverLatLng != oldWidget.driverLatLng || // Re-fetch if driver moves significantly off-route? No, usually handled by polyline trimming.
         widget.isRideStarted != oldWidget.isRideStarted) {
       
-      // If the status changed (e.g., Ride Started), force a re-fetch immediately
-      if (widget.isRideStarted != oldWidget.isRideStarted) {
-         _fetchRoute();
-      } else if (_routePoints.isEmpty) {
-         _fetchRoute();
-      }
+       _fetchRoute();
     }
 
     // 2. Animation Trigger
     if (widget.driverLatLng != oldWidget.driverLatLng && widget.driverLatLng != null) {
-      _prevDriverLoc = _animatedDriverLoc;
+      _prevDriverLoc = _animatedDriverLoc; 
       _currentDriverLoc = widget.driverLatLng;
       _prevHeading = _animatedHeading;
       _currentHeading = widget.driverHeading;
@@ -110,21 +120,70 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
     super.dispose();
   }
 
+  // 📷 Camera Follow Logic (Fixes Zoom Out)
+  void _updateCameraSmoothly(LatLng target) {
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(target), // Keeps Zoom Level!
+    );
+  }
+
+  // 🧮 Snap-to-Road Math
+  LatLng _getProjectedPointOnPolyline(LatLng pos, List<LatLng> polyline) {
+    if (polyline.length < 2) return pos;
+
+    double minDist = double.infinity;
+    LatLng snappedPos = pos;
+
+    // Search around our last known progress index (Sliding Window for Snapping too)
+    int startSearch = math.max(0, _progressIndex - 5);
+    int endSearch = math.min(polyline.length - 1, _progressIndex + 30);
+
+    for (int i = startSearch; i < endSearch; i++) {
+      LatLng p1 = polyline[i];
+      LatLng p2 = polyline[i + 1];
+      
+      LatLng projection = _projectPointOnSegment(pos, p1, p2);
+      double distance = Geolocator.distanceBetween(
+        pos.latitude, pos.longitude, 
+        projection.latitude, projection.longitude
+      );
+
+      if (distance < minDist) {
+        minDist = distance;
+        snappedPos = projection;
+      }
+    }
+
+    if (minDist > 40) return pos; // Too far? Show real location
+    return snappedPos;
+  }
+
+  LatLng _projectPointOnSegment(LatLng p, LatLng a, LatLng b) {
+    double apX = p.latitude - a.latitude;
+    double apY = p.longitude - a.longitude;
+    double abX = b.latitude - a.latitude;
+    double abY = b.longitude - a.longitude;
+
+    double ab2 = abX * abX + abY * abY;
+    double apAb = apX * abX + apY * abY;
+    double t = apAb / ab2;
+
+    if (t < 0) return a; 
+    if (t > 1) return b; 
+    return LatLng(a.latitude + abX * t, a.longitude + abY * t);
+  }
+
   // 🌍 ROUTE LOGIC
   Future<void> _fetchRoute() async {
     List<LatLng> points = [];
 
-    // CASE 1: Ride Started -> Show Driver to Drop
     if (widget.isRideStarted) {
       if (widget.driverLatLng != null && widget.dropLatLng != null) {
         points = await _routingService.getRoute(widget.driverLatLng!, widget.dropLatLng!);
       } else if (widget.pickupLatLng != null && widget.dropLatLng != null) {
-         // Fallback if driver loc is missing temporarily
          points = await _routingService.getRoute(widget.pickupLatLng!, widget.dropLatLng!);
       }
-    } 
-    // CASE 2: Before Ride Start -> Show Driver to Pickup
-    else {
+    } else {
       if (widget.driverLatLng != null && widget.pickupLatLng != null) {
         points = await _routingService.getRoute(widget.driverLatLng!, widget.pickupLatLng!);
       }
@@ -133,16 +192,45 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
     if (mounted) {
       setState(() {
         _routePoints = points;
+        _progressIndex = 0; // 🆕 Reset progress on new route
       });
+
+      if (_isFirstRouteLoad && points.isNotEmpty) {
+        _fitBoundsToRoute(points);
+        _isFirstRouteLoad = false;
+      }
     }
   }
 
-  // 🖼️ Load and Resize Auto Icon
+  void _fitBoundsToRoute(List<LatLng> points) {
+    if (_mapController == null || points.isEmpty) return;
+    
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (var p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        80.0, 
+      ),
+    );
+  }
+
   Future<void> _loadAutoIcon() async {
     try {
-      // 100 width is perfect for an "Icon/Symbol" look
       final Uint8List markerIcon = await getBytesFromAsset('assets/images/auto_icon.png', 100);
-      
       setState(() {
         _autoIcon = BitmapDescriptor.fromBytes(markerIcon);
       });
@@ -151,7 +239,6 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
     }
   }
 
-  // 🛠️ Image Resizer Helper
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: width);
@@ -179,21 +266,22 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
     );
   }
 
-  // 🔗 THE BLUE LINE LOGIC
+  // 🔗 THE BLUE LINE LOGIC (FIXED with Sliding Window)
   Set<Polyline> _buildDynamicPolyline() {
     if (_routePoints.isEmpty) return {};
     List<LatLng> displayPoints = List.from(_routePoints);
 
-    // Trim logic: Only trim if we have a driver position
     if (widget.driverLatLng != null) {
       LatLng currentPos = _animatedDriverLoc;
       
-      // Calculate closest point on the route
       int closestIndex = -1;
       double minDistance = 10000;
-      int searchLimit = math.min(_routePoints.length, 20); // Optimization
 
-      for (int i = 0; i < searchLimit; i++) {
+      // 🆕 NEW LOGIC: Search 30 points ahead of our last known spot
+      int startSearch = _progressIndex;
+      int endSearch = math.min(_routePoints.length, _progressIndex + 30);
+
+      for (int i = startSearch; i < endSearch; i++) {
         double d = Geolocator.distanceBetween(
           currentPos.latitude, currentPos.longitude,
           _routePoints[i].latitude, _routePoints[i].longitude
@@ -204,15 +292,27 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
         }
       }
 
-      // If close to route, trim previous points and attach to Driver
+      // If we found a match, update progress and trim line
       if (closestIndex != -1 && minDistance < 100) {
-        displayPoints = _routePoints.sublist(closestIndex);
-        displayPoints.insert(0, currentPos); // Attach line to Auto Symbol
+        _progressIndex = closestIndex; // Update tracker
+        
+        if (closestIndex + 1 < _routePoints.length) {
+          displayPoints = _routePoints.sublist(closestIndex + 1);
+          displayPoints.insert(0, currentPos); 
+        } else {
+          displayPoints = []; // End of route
+        }
       }
       else if (minDistance >= 100) {
-        // Driver is far away! Force a new route calculation.
-        // We use Future.microtask to avoid calling setState during build
-        Future.microtask(() => _fetchRoute());
+        // Drifting? Re-fetch route
+        if (_routePoints.length > 5) {
+             Future.microtask(() => _fetchRoute());
+        }
+      }
+      // If no new point found, stay at last known progress
+      else if (_progressIndex > 0 && _progressIndex < _routePoints.length) {
+         displayPoints = _routePoints.sublist(_progressIndex);
+         displayPoints.insert(0, currentPos);
       }
     }
 
@@ -220,7 +320,7 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
       Polyline(
         polylineId: const PolylineId('active_route'),
         points: displayPoints,
-        color: Colors.blue, // 🔵 YOU WANTED BLUE
+        color: Colors.blue, 
         width: 5,
         jointType: JointType.round,
         startCap: Cap.roundCap,
@@ -232,8 +332,6 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
   Set<Marker> _buildMarkers() {
     Set<Marker> markers = {};
 
-    // 1. Pickup Marker (Always show, or hide after ride starts depending on preference)
-    // Most apps keep it to show where the ride started.
     if (widget.pickupLatLng != null) {
       markers.add(Marker(
         markerId: const MarkerId('pickup'),
@@ -242,7 +340,6 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
       ));
     }
 
-    // 2. Drop Marker
     if (widget.dropLatLng != null) {
       markers.add(Marker(
         markerId: const MarkerId('drop'),
@@ -251,16 +348,14 @@ class _RideMapWidgetState extends State<RideMapWidget> with TickerProviderStateM
       ));
     }
 
-    // 3. 🛺 AUTO SYMBOL (Driver)
     if (widget.driverLatLng != null) {
       markers.add(Marker(
         markerId: const MarkerId('driver'),
-        position: _animatedDriverLoc,
+        position: _animatedDriverLoc, // Snapped Position
         rotation: _animatedHeading,
         flat: true,
         anchor: const Offset(0.5, 0.5),
         zIndex: 10,
-        // Uses the resized icon
         icon: _autoIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
       ));
     }

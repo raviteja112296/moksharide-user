@@ -37,7 +37,7 @@
             android:value="ride_requests" />
         <meta-data
     android:name="com.google.android.geo.API_KEY"
-    android:value="AIzaSyCfAr6OUiTokdQnsJZS7nCoTRxhvWOVuV8" />
+    android:value="AIzaSyBKbBQiebZr8_wWTwfhfqzln5VHijLb7cc" />
 
         <!-- Main Activity -->
         <activity
