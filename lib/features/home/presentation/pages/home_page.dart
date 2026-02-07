@@ -19,7 +19,7 @@ import '../../../auth/data/auth_service.dart';
 import '../widgets/ride_completion_sheet.dart';
 
 // 🔑 REPLACE WITH YOUR REAL GOOGLE MAPS API KEY
-const String googleMapApiKey = "AIzaSyCfAr6OUiTokdQnsJZS7nCoTRxhvWOVuV8";
+const String googleMapApiKey = "AIzaSyBKbBQiebZr8_wWTwfhfqzln5VHijLb7cc";
 
 class RideService {
   final String id;
@@ -215,22 +215,35 @@ class _HomePageState extends State<HomePage> {
     );
   }
   
+  // 3. Get Details (Lat/Lng) from Place ID
   Future<void> _getPlaceDetails(String placeId, String address) async {
-    // Fake coordinates near Chintamani
-    double fakeLat = 13.4000 + (double.parse(placeId) * 0.001); 
-    double fakeLng = 78.0500 + (double.parse(placeId) * 0.001);
+    final url = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=geometry&key=$googleMapApiKey';
+    
+    try {
+      final response = await http.get(Uri.parse(url));
+      final json = jsonDecode(response.body);
 
-    setState(() {
-      _dropLocation = address;
-      _dropController.text = address;
-      dropLatLng = LatLng(fakeLat, fakeLng);
-      
-      // 🔥 IMPORTANT: Automatically switch UI to BOOKING mode
-      _rideUIState = UserRideUIState.booking;
-    });
+      if (json['status'] == 'OK') {
+        final location = json['result']['geometry']['location'];
+        final lat = location['lat'];
+        final lng = location['lng'];
 
-    _calculateDistanceAndFare(); 
+        setState(() {
+          _dropLocation = address;
+          _dropController.text = address;
+          dropLatLng = LatLng(lat, lng);
+ //🔥 IMPORTANT: Automatically switch UI to BOOKING mode
+     _rideUIState = UserRideUIState.booking;
+        });
+
+        // ✅ Calculate Fare Immediately
+        _calculateDistanceAndFare();
+      }
+    } catch (e) {
+      _showSnack("Failed to fetch location details");
+    }
   }
+
 
   // 4. Calculate Dynamic Fare
   void _calculateDistanceAndFare() {
@@ -330,7 +343,7 @@ class _HomePageState extends State<HomePage> {
           isScrollControlled: true, 
           builder: (context) => RideCompletionSheet(
             rideId: rideId,
-            amount: (data['estimatedPrice'] ?? 0.0).toDouble(),
+            amount: (data['estimatedPrice'] ?? 0.0),
           ),
         );
       }
@@ -721,15 +734,33 @@ class PlaceSearchDelegate extends SearchDelegate<Suggestion?> {
   }
   
   Future<List<Suggestion>> _fetchSuggestions(String input) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    final request = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$googleMapApiKey&sessiontoken=$sessionToken&components=country:in';
+    
+    try {
+      final response = await http.get(Uri.parse(request));
+      
+      // 🔍 DEBUG PRINT (Look for this in your console)
+      print("🔎 API Response: ${response.body}"); 
 
-    return [
-      Suggestion("1", "Chintamani Bus Stand"),
-      Suggestion("2", "Chelur Road Junction"),
-      Suggestion("3", "Moksha Office"),
-      Suggestion("4", "Railway Station"),
-      Suggestion("5", "Kolar Circle"),
-    ].where((s) => s.description.toLowerCase().contains(input.toLowerCase())).toList();
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        
+        if (result['status'] == 'OK') {
+          return (result['predictions'] as List)
+              .map<Suggestion>((p) => Suggestion(p['place_id'], p['description']))
+              .toList();
+        } else {
+          // Print why it failed (e.g., REQUEST_DENIED, BILLING_NOT_ENABLED)
+          print("❌ API Error Status: ${result['status']}");
+          print("❌ Error Message: ${result['error_message']}");
+        }
+      } else {
+        print("❌ HTTP Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("❌ Network Error: $e");
+    }
+    return [];
   }
 }
 
