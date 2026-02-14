@@ -39,12 +39,11 @@ class RideService {
   });
 }
 
-// 🔥 UPDATED ENUM
 enum UserRideUIState {
-  intro,   // 👈 NEW: Shows App Details/Aim
-  booking, // 👈 Was 'idle': Shows Vehicle List & Price
-  waiting,
-  showOtp,
+  intro,   // Shows Draggable Sheet + Search Bars
+  booking, // Shows Static Sheet + Vehicle List (Search Bars Hidden)
+  waiting, // Shows Static Sheet (Search Bars Hidden)
+  showOtp, // Shows Static Sheet (Search Bars Hidden)
 }
 
 class HomePage extends StatefulWidget {
@@ -77,8 +76,7 @@ class _HomePageState extends State<HomePage> {
   double _driverHeading = 0.0;
   String _selectedServiceId = 'auto';
   String? _dropLocation;
-  late double distanceKm;
-  // 🔥 Set Initial State to INTRO
+  
   UserRideUIState _rideUIState = UserRideUIState.intro;
 
   String? _activeRideId;
@@ -158,15 +156,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // 🛑 STOP TRACKING HELPER
   void _stopDriverTracking() {
     _driverSubscription?.cancel();
     setState(() {
       _isRideOngoing = false;
+
     });
   }
 
-  // 📡 START TRACKING
   void _startTrackingDriver(String driverId) {
     _driverSubscription?.cancel();
 
@@ -215,7 +212,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
   
-  // 3. Get Details (Lat/Lng) from Place ID
   Future<void> _getPlaceDetails(String placeId, String address) async {
     final url = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=geometry&key=$googleMapApiKey';
     
@@ -232,11 +228,11 @@ class _HomePageState extends State<HomePage> {
           _dropLocation = address;
           _dropController.text = address;
           dropLatLng = LatLng(lat, lng);
- //🔥 IMPORTANT: Automatically switch UI to BOOKING mode
-     _rideUIState = UserRideUIState.booking;
+          //🔥 IMPORTANT: Automatically switch UI to BOOKING mode
+          // This will Hide search bars and show the Static Booking Sheet
+          _rideUIState = UserRideUIState.booking; 
         });
 
-        // ✅ Calculate Fare Immediately
         _calculateDistanceAndFare();
       }
     } catch (e) {
@@ -244,8 +240,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
-  // 4. Calculate Dynamic Fare
   void _calculateDistanceAndFare() {
     if (pickupLatLng == null || dropLatLng == null) return;
 
@@ -317,7 +311,7 @@ class _HomePageState extends State<HomePage> {
       else if (status == 'started') {
         setState(() {
           _isRideOngoing = true; 
-          _rideUIState = UserRideUIState.showOtp; // Or hide if you want clean screen
+          _rideUIState = UserRideUIState.showOtp; 
         });
       }
       else if(status == 'cancelled'){
@@ -334,7 +328,7 @@ class _HomePageState extends State<HomePage> {
            pickupLatLng = null;
            dropLatLng = null;
            _isRideOngoing = false;
-           _rideUIState = UserRideUIState.intro; // Go back to Intro
+           _rideUIState = UserRideUIState.intro; 
         });
         showModalBottomSheet(
           context: context,
@@ -368,7 +362,6 @@ class _HomePageState extends State<HomePage> {
         dropLng: dropLatLng!.longitude,
         serviceType: _selectedServiceId,
         estimatedPrice: _services.firstWhere((s) => s.id == _selectedServiceId).price,
-        // distanceKm:distanceKm,
       );
 
       setState(() {
@@ -378,8 +371,12 @@ class _HomePageState extends State<HomePage> {
       });
       _listenToRideStatus(rideId);
       _showSnack('Ride booked! ID: $rideId');
-    } catch (e) {
-      _showSnack('Booking failed: $e');
+    } catch (e, stackTrace) {
+      // 🔥 PRINT THE REAL ERROR TO CONSOLE
+      debugPrint("❌ ERROR REASON: $e");
+      debugPrint("📜 STACK TRACE: $stackTrace");
+
+      _showSnack('Booking failed. Check console for details.');
     }
   }
 
@@ -405,21 +402,24 @@ class _HomePageState extends State<HomePage> {
       onTap: () => setState(() => _selectedServiceId = service.id),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Reduced Padding
+        margin: const EdgeInsets.only(bottom: 8), // Small Margin
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? Colors.blue : Colors.grey.shade300, width: isSelected ? 2 : 1),
+          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.white,
+          border: Border.all(color: isSelected ? Colors.blue : Colors.grey.shade200, width: isSelected ? 2 : 1),
         ),
         child: Row(
           children: [
-            Image.asset(service.image, width: 48, height: 48),
+            Image.asset(service.image, width: 40, height: 40), // Smaller Image
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(service.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text("${service.distanceKm.toStringAsFixed(1)} km • ${service.durationMin} mins", style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                  Text(service.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  Text("${service.distanceKm.toStringAsFixed(1)} km • ${service.durationMin} mins", 
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
             ),
@@ -430,62 +430,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ✨ NEW: Intro/About Sheet Widget
-  Widget _buildIntroSheet() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      controller: ScrollController(), // Dummy controller to satisfy draggable requirement
-      children: [
-        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-        const SizedBox(height: 20),
-        
-        // 1. Branding / Aim
-        const Text("Welcome to Moksha Ride 🛺", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text("Safety • Reliability • Fast", style: TextStyle(fontSize: 14, color: Colors.blue, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Text("Our aim is to provide affordable and safe transportation for Chintamani. Book Autos and Cabs instantly.", 
-          style: TextStyle(color: Colors.grey.shade600, height: 1.5)),
-        
-        const SizedBox(height: 25),
-        const Divider(),
-        const SizedBox(height: 15),
-
-        // 2. Services Preview
-        const Text("Our Services", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _miniServiceIcon("Auto", 'assets/images/auto.png'),
-            _miniServiceIcon("Cab", 'assets/images/car.png'),
-            _miniServiceIcon("Bike", 'assets/images/bike.jpg'), // Example
-          ],
-        ),
-
-        const SizedBox(height: 25),
-        const Divider(),
-        const SizedBox(height: 15),
-
-        // 3. Contact Info
-        const Text("Contact Us", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const CircleAvatar(backgroundColor: Colors.blueAccent, child: Icon(Icons.phone, color: Colors.white)),
-          title: const Text("+91 98765 43210"),
-          subtitle: const Text("24/7 Customer Support"),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.email, color: Colors.white)),
-          title: const Text("support@moksharide.com"),
-          subtitle: const Text("Email us for queries"),
-        ),
-        
-        // 4. Spacer to push content up so it's not hidden behind FAB
-        const SizedBox(height: 80),
-      ],
+  // 1. Draggable Intro Sheet
+  Widget _buildIntroSheet(ScrollController controller) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+      ),
+      child: ListView(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+          const SizedBox(height: 20),
+          
+          const Text("Welcome to Moksha Ride 🛺", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 5),
+          const Text("Safe • Reliable • Fast", style: TextStyle(fontSize: 13, color: Colors.blue, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text("Affordable transportation for Chintamani.", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+          
+          const SizedBox(height: 20),
+          
+          const Text("Services", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _miniServiceIcon("Auto", 'assets/images/auto.png'),
+              _miniServiceIcon("Cab", 'assets/images/car.png'),
+              _miniServiceIcon("Bike", 'assets/images/bike.jpg'),
+            ],
+          ),
+          const SizedBox(height: 100), // Extra space for scrolling
+        ],
+      ),
     );
   }
 
@@ -493,64 +473,83 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-          child: Image.asset(asset, width: 40, height: 40, errorBuilder: (c,o,s) => const Icon(Icons.directions_car, size: 40, color: Colors.grey)),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+          child: Image.asset(asset, width: 35, height: 35, errorBuilder: (c,o,s) => const Icon(Icons.directions_car, size: 35, color: Colors.grey)),
         ),
-        const SizedBox(height: 8),
-        Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
       ],
     );
   }
 
-  // ✨ NEW: Booking Sheet Widget (Extracted from old logic)
-  Widget _buildBookingSheet(ScrollController controller) {
-    return ListView(
-      controller: controller, 
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        const SizedBox(height: 10),
-        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-        const SizedBox(height: 16),
-        
-        // Header with Close Button
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text("Select Ride", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.grey),
-              onPressed: _resetToIntro, // 👈 Go back to Intro
-            ),
-          ],
-        ),
-        
-        const SizedBox(height: 10),
-        Column(children: _services.map((s) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _serviceCard(s))).toList()),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _bookRide,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-            child: Text("BOOK ${_selectedServiceId.toUpperCase()}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+  // 2. Static Booking Sheet (Compact, No Scroll)
+  Widget _buildBookingSheet() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // 🔥 Compact Size
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+          const SizedBox(height: 15),
+          
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Select Ride", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text("Distance: ${(_services[0].distanceKm).toStringAsFixed(1)} km", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.grey),
+                onPressed: _resetToIntro, 
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 20),
-      ],
+          
+          const SizedBox(height: 10),
+          
+          // Service List (Using Column, not ListView)
+          Column(
+            children: _services.map((s) => _serviceCard(s)).toList(),
+          ),
+          
+          const SizedBox(height: 15),
+          
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _bookRide,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black, 
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
+              child: Text("BOOK ${_selectedServiceId.toUpperCase()}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Determine sheet height based on state
-    double initialSize = 0.38;
-    if (_rideUIState == UserRideUIState.intro) initialSize = 0.45;
-    if (_rideUIState == UserRideUIState.booking) initialSize = 0.50;
-
     return Scaffold(
       body: Stack(
         children: [
+          // 1. MAP LAYER
           RideMapWidget(
             initialCenter: pickupLatLng ?? _currentUserLocation ?? const LatLng(13.4000, 78.0500),
             pickupLatLng: pickupLatLng,
@@ -563,54 +562,59 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           
-          // SEARCH BARS
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 16, right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                 _searchContainer(
-                    child: TextField(
-                      controller: _pickupController,
-                      decoration: const InputDecoration(hintText: "Pickup location", border: InputBorder.none),
-                      readOnly: true, 
-                      onTap: _setCurrentPickupLocation, 
-                    ),
-                    leadingColor: Colors.green
-                 ),
-                 const SizedBox(height: 10),
-                 
-                 // Drop Location Search
-                 GestureDetector(
-                   onTap: _openDropoffSearch,
-                   child: _searchContainer(
-                     child: Text(_dropLocation ?? "Where to?", style: TextStyle(color: _dropLocation == null ? Colors.grey : Colors.black, fontSize: 16)),
-                     leadingColor: Colors.red,
-                     trailing: Icons.search,
+          // 2. TOP UI LAYER (Search & Profile) - ONLY visible in INTRO state
+          if (_rideUIState == UserRideUIState.intro) ...[
+            // Pickup Search
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 16, right: 16, 
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   _searchContainer(
+                     child: TextField(
+                       controller: _pickupController,
+                       decoration: const InputDecoration(hintText: "Pickup location", border: InputBorder.none, contentPadding: EdgeInsets.only(bottom: 5)),
+                       readOnly: true, 
+                       onTap: _setCurrentPickupLocation, 
+                       style: const TextStyle(fontSize: 14),
+                     ),
+                     leadingColor: Colors.green
                    ),
+                   const SizedBox(height: 10),
+                   
+                   // Drop Search
+                   GestureDetector(
+                     onTap: _openDropoffSearch,
+                     child: _searchContainer(
+                       child: Text(_dropLocation ?? "Where to?", style: TextStyle(color: _dropLocation == null ? Colors.grey : Colors.black, fontSize: 16)),
+                       leadingColor: Colors.red,
+                       trailing: Icons.search,
+                     ),
+                   ),
+                ],
+              ),
+            ),
+            
+            // Profile Button
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              right: 16,
+              child: GestureDetector(
+                 onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+                 child: CircleAvatar(
+                   radius: 20, backgroundColor: Colors.white,
+                   backgroundImage: _authService.currentUser?.photoURL != null ? NetworkImage(_authService.currentUser!.photoURL!) : null,
+                   child: _authService.currentUser?.photoURL == null ? const Icon(Icons.person, size: 20, color: Colors.black87) : null,
                  ),
-              ],
+              ),
             ),
-          ),
+          ],
           
-          // PROFILE BUTTON
+          // 3. GPS BUTTON (Adjust position based on state)
           Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: GestureDetector(
-               onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-               child: CircleAvatar(
-                 radius: 20, backgroundColor: Colors.white,
-                 backgroundImage: _authService.currentUser?.photoURL != null ? NetworkImage(_authService.currentUser!.photoURL!) : null,
-                 child: _authService.currentUser?.photoURL == null ? const Icon(Icons.person, size: 20, color: Colors.black87) : null,
-               ),
-            ),
-          ),
-          
-          // GPS BUTTON
-          Positioned(
-            right: 16, bottom: (_rideUIState == UserRideUIState.intro || _rideUIState == UserRideUIState.booking) ? 350 : 260,
+            right: 16, 
+            bottom: (_rideUIState == UserRideUIState.intro) ? 320 : 380, // Move up if static sheet is open
             child: FloatingActionButton(
               mini: true, backgroundColor: Colors.white, elevation: 4,
               onPressed: _setCurrentPickupLocation,
@@ -618,43 +622,43 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           
-          // 🔥 DRAGGABLE SHEET LOGIC
-          DraggableScrollableSheet(
-            initialChildSize: initialSize, 
-            minChildSize: 0.30, 
-            maxChildSize: 0.75,
-            builder: (_, controller) {
-              return Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -2))],
-                ),
-                child: Builder(
-                  builder: (_) {
-                    // 1. Waiting for Driver
-                    if (_rideUIState == UserRideUIState.waiting) {
-                      return RideWaitingSheet(
-                      onCancel: () {
-                        // Logic to delete ride request from Firebase
-                        _rideRepository.cancelRide(_activeRideId!);
-                        setState(() => _rideUIState = UserRideUIState.booking);
-                      },
-                    );
-                    }
-                    
-                    // 2. OTP Sheet
-                    if (_rideUIState == UserRideUIState.showOtp) return RideOtpSheet(otp: _rideOtp ?? '----', driverName: 'Ravi', driverRating: 4.5);
-                    
-                    // 3. Booking Sheet (Vehicle List)
-                    if (_rideUIState == UserRideUIState.booking) return _buildBookingSheet(controller);
-                    
-                    // 4. Intro Sheet (Default)
-                    return _buildIntroSheet();
+          // 4. BOTTOM SHEET LAYER
+          // A. INTRO: Draggable Sheet
+          if (_rideUIState == UserRideUIState.intro)
+            DraggableScrollableSheet(
+              initialChildSize: 0.35, 
+              minChildSize: 0.35, 
+              maxChildSize: 0.70,
+              builder: (_, controller) {
+                return _buildIntroSheet(controller);
+              },
+            ),
+
+          // B. BOOKING: Static Sheet (Bottom Docked)
+          if (_rideUIState == UserRideUIState.booking)
+             Positioned(
+               bottom: 0, left: 0, right: 0,height: 400,
+               child: _buildBookingSheet(),
+             ),
+
+          // C. WAITING: Static Sheet
+          if (_rideUIState == UserRideUIState.waiting)
+             Positioned(
+               bottom: 0, left: 0, right: 0,height: 350,
+               child: RideWaitingSheet(
+                  onCancel: () {
+                    if (_activeRideId != null) _rideRepository.cancelRide(_activeRideId!);
+                    setState(() => _rideUIState = UserRideUIState.booking);
                   },
-                ),
-              );
-            },
-          ),
+               ),
+             ),
+
+          // D. OTP: Static Sheet
+          if (_rideUIState == UserRideUIState.showOtp)
+             Positioned(
+               bottom: 0, left: 0, right: 0,height: 365,
+               child: RideOtpSheet(otp: _rideOtp ?? '----', driverName: 'Ravi', driverRating: 4.5),
+             ),
         ],
       ),
     );
@@ -662,59 +666,45 @@ class _HomePageState extends State<HomePage> {
 
   Widget _searchContainer({required Widget child, required Color leadingColor, IconData? trailing}) {
     return Container(
-      height: 56, padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 14, offset: const Offset(0, 6))]),
+      height: 48, padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
       child: Row(
         children: [
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: leadingColor, shape: BoxShape.circle)),
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: leadingColor, shape: BoxShape.circle)),
           const SizedBox(width: 12),
           Expanded(child: child),
-          if (trailing != null) Icon(trailing, color: Colors.grey),
+          if (trailing != null) Icon(trailing, color: Colors.grey, size: 20),
         ],
       ),
     );
   }
 }
 
-// ... (Rest of PlaceSearchDelegate remains exactly the same as before)
-// -----------------------------------------------------------
-// 🔎 PLACE SEARCH DELEGATE (Mock Version)
-// -----------------------------------------------------------
-
+// 🔎 PLACE SEARCH DELEGATE
 class PlaceSearchDelegate extends SearchDelegate<Suggestion?> {
   final String sessionToken;
-  
   PlaceSearchDelegate(this.sessionToken);
 
   @override
   List<Widget>? buildActions(BuildContext context) {
-    return [
-      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
-    ];
+    return [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
   }
 
   @override
   Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back), 
-      onPressed: () => close(context, null),
-    );
+    return IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => close(context, null));
   }
 
   @override
-  Widget buildResults(BuildContext context) {
-    return Container();
-  }
+  Widget buildResults(BuildContext context) => Container();
 
   @override
   Widget buildSuggestions(BuildContext context) {
     if (query.isEmpty) return Container();
-
     return FutureBuilder(
       future: _fetchSuggestions(query),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        
         final suggestions = snapshot.data as List<Suggestion>;
         return ListView.builder(
           itemCount: suggestions.length,
@@ -723,9 +713,7 @@ class PlaceSearchDelegate extends SearchDelegate<Suggestion?> {
             return ListTile(
               leading: const Icon(Icons.location_on_outlined),
               title: Text(suggestion.description),
-              onTap: () {
-                close(context, suggestion); 
-              },
+              onTap: () => close(context, suggestion),
             );
           },
         );
@@ -735,28 +723,14 @@ class PlaceSearchDelegate extends SearchDelegate<Suggestion?> {
   
   Future<List<Suggestion>> _fetchSuggestions(String input) async {
     final request = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$googleMapApiKey&sessiontoken=$sessionToken&components=country:in';
-    
     try {
       final response = await http.get(Uri.parse(request));
-      
-      // 🔍 DEBUG PRINT (Look for this in your console)
-      print("🔎 API Response: ${response.body}"); 
-
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
-        
         if (result['status'] == 'OK') {
-          return (result['predictions'] as List)
-              .map<Suggestion>((p) => Suggestion(p['place_id'], p['description']))
-              .toList();
-        } else {
-          // Print why it failed (e.g., REQUEST_DENIED, BILLING_NOT_ENABLED)
-          print("❌ API Error Status: ${result['status']}");
-          print("❌ Error Message: ${result['error_message']}");
+          return (result['predictions'] as List).map<Suggestion>((p) => Suggestion(p['place_id'], p['description'])).toList();
         }
-      } else {
-        print("❌ HTTP Error: ${response.statusCode}");
-      }
+      } 
     } catch (e) {
       print("❌ Network Error: $e");
     }
