@@ -21,7 +21,7 @@ String generateRideOtp() {
     required double dropLat,
     required double dropLng,
     required String serviceType,
-    required double estimatedPrice,
+    required double estimatedPrice, 
     // required double distanceKm,
   }) async {
     // 🔐 AUTH CHECK
@@ -32,6 +32,10 @@ String generateRideOtp() {
 
     // 📝 CREATE RIDE DOCUMENT REFERENCE FIRST
     final rideRef = _firestore.collection('ride_requests').doc();
+    final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
     final String rideOtp = generateRideOtp();
 
 
@@ -39,6 +43,7 @@ String generateRideOtp() {
 await rideRef.set({
   'rideId': rideRef.id,
   'userId': user.uid,
+  'username': doc['name'],
 
   'pickupAddress': pickup,
   'pickupLat': pickupLat,
@@ -48,7 +53,7 @@ await rideRef.set({
   'dropLat': dropLat,
   'dropLng': dropLng,
 
-  'serviceType': serviceType,
+  'serviceType': serviceType.trim().toLowerCase(),
   'estimatedPrice': estimatedPrice,
   // 'distanceKm':distanceKm,
   /// 🔐 OTP (IMPORTANT)
@@ -57,9 +62,9 @@ await rideRef.set({
 
   'status': 'requested',
   'assignedDriverId': null,
+  'assignedDriverName': null,
 
   'createdAt': FieldValue.serverTimestamp(),
-  'updatedAt': FieldValue.serverTimestamp(),
 });
 
 
@@ -83,13 +88,16 @@ await rideRef.set({
       print('⚠️ Driver token missing');
       return rideRef.id;
     }
-
+    
+final selectedSerivece=await rideRef.get();
+String selectedServiceType = selectedSerivece['serviceType'];
     // 🔔 CALL YOUR NOTIFICATION API (THIS IS WHAT YOU ASKED)
     await RideNotificationApi.sendRideNotification(
       rideId: rideRef.id,
       pickupLat: pickupLat,
       pickupLng: pickupLng,
       fare: estimatedPrice,
+      serviceType:selectedServiceType,
       // driverToken: driverToken,
     );
 

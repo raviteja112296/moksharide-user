@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:moksharide_user/core/theme/theme_notifier.dart';
 import 'package:moksharide_user/features/ride/presentation/pages/ride_status_screen.dart';
 import 'package:moksharide_user/firebase_options.dart';
 import 'package:moksharide_user/services/fcm_service.dart';
@@ -10,6 +11,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await ThemeNotifier.initTheme();
   runApp(const MyApp());
 }
 
@@ -35,11 +37,16 @@ void initState() {
   }
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeNotifier.themeMode,
+      builder: (context, currentMode, child) {
     return MaterialApp(
-      title: 'AmbaniYatri',
+      title: 'MokshaRide',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-
+      themeMode: currentMode,
+      // theme: ThemeData.light(useMaterial3: true),
+          darkTheme: ThemeData.dark(useMaterial3: true),
       // ✅ static routes (NO arguments)
       routes: AppRoutes.routes,
 
@@ -58,6 +65,7 @@ void initState() {
       initialRoute: AppRoutes.splash,
       // home: HomePage(),
     );
-    
+      },
+    );
   }
 }

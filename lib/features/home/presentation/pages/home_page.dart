@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:moksharide_user/features/home/presentation/pages/intro_bottom_sheet.dart';
 import 'package:uuid/uuid.dart'; 
 import 'package:geocoding/geocoding.dart';
 
@@ -18,9 +19,8 @@ import '../../../../core/utils/app_routes.dart';
 import '../../../auth/data/auth_service.dart';
 import '../widgets/ride_completion_sheet.dart';
 
-// 🔑 REPLACE WITH YOUR REAL GOOGLE MAPS API KEY
-const String googleMapApiKey = "AIzaSyBKbBQiebZr8_wWTwfhfqzln5VHijLb7cc";
-
+const String googleMapApiKey = "AIzaSyBKbBQiebZr8_wWTwfhfqzln5VHijLb7cc";// kavya api
+//my api :== AIzaSyCfAr6OUiTokdQnsJZS7nCoTRxhvWOVuV8
 class RideService {
   final String id;
   final String name;
@@ -264,9 +264,10 @@ class _HomePageState extends State<HomePage> {
         } else if (service.id == 'cab') {
           double calc = 50 + (distanceKm * 22);
           service.price = calc < 80 ? 80 : calc; 
-        }else if (service.id == 'bike') {
-          double calc = 40 + (distanceKm * 20);
-          service.price = calc < 80 ? 80 : calc; 
+        // }else if (service.id == 'bike') {
+        }else{
+          double calc = 30 + (distanceKm * 20);
+          service.price = calc < 40 ? 40 : calc; 
         }
       }
     });
@@ -361,7 +362,8 @@ class _HomePageState extends State<HomePage> {
         dropLat: dropLatLng!.latitude,
         dropLng: dropLatLng!.longitude,
         serviceType: _selectedServiceId,
-        estimatedPrice: _services.firstWhere((s) => s.id == _selectedServiceId).price,
+        estimatedPrice: _services.firstWhere((s) => s.id == _selectedServiceId).price, 
+        
       );
 
       setState(() {
@@ -393,7 +395,7 @@ class _HomePageState extends State<HomePage> {
   final List<RideService> _services = [
     RideService(id: 'auto', name: 'Auto', image: 'assets/images/auto.png', distanceKm: 0, durationMin: 0, price: 0),
     RideService(id: 'cab', name: 'Cab', image: 'assets/images/car.png', distanceKm: 0, durationMin: 0, price: 0),
-    RideService(id: 'bike ', name: 'Bike', image: 'assets/images/bike.jpg', distanceKm: 0, durationMin: 0, price: 40),
+    RideService(id: 'bike ', name: 'Bike', image: 'assets/images/bike.jpg', distanceKm: 0, durationMin: 0, price:0 ),
   ];
 
   Widget _serviceCard(RideService service) {
@@ -429,68 +431,15 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  // 1. Draggable Intro Sheet
-  Widget _buildIntroSheet(ScrollController controller) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
-      ),
-      child: ListView(
-        controller: controller,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        children: [
-          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-          const SizedBox(height: 20),
-          
-          const Text("Welcome to Moksha Ride 🛺", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 5),
-          const Text("Safe • Reliable • Fast", style: TextStyle(fontSize: 13, color: Colors.blue, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Text("Affordable transportation for Chintamani.", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-          
-          const SizedBox(height: 20),
-          
-          const Text("Services", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _miniServiceIcon("Auto", 'assets/images/auto.png'),
-              _miniServiceIcon("Cab", 'assets/images/car.png'),
-              _miniServiceIcon("Bike", 'assets/images/bike.jpg'),
-            ],
-          ),
-          const SizedBox(height: 100), // Extra space for scrolling
-        ],
-      ),
-    );
-  }
-
-  Widget _miniServiceIcon(String name, String asset) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
-          child: Image.asset(asset, width: 35, height: 35, errorBuilder: (c,o,s) => const Icon(Icons.directions_car, size: 35, color: Colors.grey)),
-        ),
-        const SizedBox(height: 4),
-        Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-
+  //1. I build separate class for into sheet
   // 2. Static Booking Sheet (Compact, No Scroll)
   Widget _buildBookingSheet() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min, // 🔥 Compact Size
@@ -630,7 +579,7 @@ class _HomePageState extends State<HomePage> {
               minChildSize: 0.35, 
               maxChildSize: 0.70,
               builder: (_, controller) {
-                return _buildIntroSheet(controller);
+                return IntroBottomSheet(scrollController: controller);
               },
             ),
 
@@ -667,7 +616,7 @@ class _HomePageState extends State<HomePage> {
   Widget _searchContainer({required Widget child, required Color leadingColor, IconData? trailing}) {
     return Container(
       height: 48, padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
       child: Row(
         children: [
           Container(width: 8, height: 8, decoration: BoxDecoration(color: leadingColor, shape: BoxShape.circle)),
