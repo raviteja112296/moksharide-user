@@ -12,7 +12,7 @@ class RideNotificationApi {
     required String rideId,
     required double pickupLat,
     required double pickupLng,
-    required double fare,
+    required double fare, required String serviceType,
   }) async {
     final url = Uri.parse("$_baseUrl$_endpoint");
 
@@ -27,6 +27,8 @@ class RideNotificationApi {
           "pickupLat": pickupLat,
           "pickupLng": pickupLng,
           "fare": fare,
+          "serviceType":serviceType,
+
         }),
       );
 
