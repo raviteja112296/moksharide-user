@@ -81,6 +81,7 @@ class _HomePageState extends State<HomePage> {
 
   String? _activeRideId;
   String? _rideOtp;
+  String? _assignedDriverName;
   StreamSubscription<DocumentSnapshot>? _rideSubscription;
 
   @override
@@ -144,17 +145,49 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openDropoffSearch() async {
-    final sessionToken = const Uuid().v4();
-    
-    final Suggestion? result = await showSearch<Suggestion?>(
+  try {
+    /// Generate session token for Google Places API
+    final String sessionToken = const Uuid().v4();
+
+    /// Open search UI
+    final Suggestion? selectedPlace = await showSearch<Suggestion?>(
       context: context,
       delegate: PlaceSearchDelegate(sessionToken),
     );
 
-    if (result != null) {
-      _getPlaceDetails(result.placeId, result.description);
+    /// If user cancelled search
+    if (selectedPlace == null) return;
+
+    /// Optional: show loading indicator
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    /// Fetch place details
+    await _getPlaceDetails(
+      selectedPlace.placeId,
+      selectedPlace.description,
+    );
+
+    /// Close loading dialog
+    if (mounted) Navigator.pop(context);
+
+  } catch (e) {
+    /// Handle errors gracefully
+    if (mounted) {
+      Navigator.pop(context); // close loader if open
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to load location. Please try again."),
+        ),
+      );
     }
   }
+}
 
   void _stopDriverTracking() {
     _driverSubscription?.cancel();
@@ -297,7 +330,12 @@ class _HomePageState extends State<HomePage> {
       final status = data['status'];
       final otp = data['rideOtp'];
       
+      
       final assignedDriverId = data['assignedDriverId'];
+      final driverName = data['assignedDriverName'] as String?;
+      if (driverName != null && _assignedDriverName != driverName) {
+        setState(() => _assignedDriverName = driverName);
+      }
       
       if (assignedDriverId != null && _driverSubscription == null) {
           _startTrackingDriver(assignedDriverId);
@@ -606,7 +644,7 @@ class _HomePageState extends State<HomePage> {
           if (_rideUIState == UserRideUIState.showOtp)
              Positioned(
                bottom: 0, left: 0, right: 0,height: 365,
-               child: RideOtpSheet(otp: _rideOtp ?? '----', driverName: 'Ravi', driverRating: 4.5),
+               child: RideOtpSheet(otp: _rideOtp ?? '----', driverName: _assignedDriverName!, driverRating: 4.5),
              ),
         ],
       ),
