@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:moksharide_user/core/theme/theme_notifier.dart';
+import 'package:moksharide_user/features/profile/presentation/WebPageScreen.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -9,61 +10,129 @@ class UserSettingsPage extends StatefulWidget {
 }
 
 class _UserSettingsPageState extends State<UserSettingsPage> {
+
   bool _pushNotifications = true;
-  
 
   @override
   Widget build(BuildContext context) {
+
     bool isDarkMode = ThemeNotifier.themeMode.value == ThemeMode.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Settings"),
         centerTitle: true,
+        elevation: 0,
       ),
+
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         children: [
-          _buildSectionHeader("Preferences"),
+
+          /// ------------------ PREFERENCES ------------------
+          _sectionTitle("Preferences"),
+
           _buildSwitchTile(
             title: "Push Notifications",
             subtitle: "Receive ride updates and alerts",
             icon: Icons.notifications_active_outlined,
             value: _pushNotifications,
-            onChanged: (val) => setState(() => _pushNotifications = val),
+            onChanged: (val) {
+              setState(() => _pushNotifications = val);
+            },
           ),
+
           _buildSwitchTile(
             title: "Dark Mode",
-            subtitle: "Switch to dark theme",
+            subtitle: "Switch between light and dark theme",
             icon: Icons.dark_mode_outlined,
             value: isDarkMode,
-            onChanged: (val) => setState(() => ThemeNotifier.toggleTheme(val)),
+            onChanged: (val) {
+              setState(() {
+                ThemeNotifier.toggleTheme(val);
+              });
+            },
           ),
-          
-          const SizedBox(height: 20),
-          _buildSectionHeader("Legal & About"),
-          _buildListTile(Icons.privacy_tip_outlined, "Privacy Policy"),
-          _buildListTile(Icons.description_outlined, "Terms of Service"),
-          _buildListTile(Icons.help_outline, "Help & Support"),
-          
+
+          const SizedBox(height: 24),
+
+          /// ------------------ LEGAL ------------------
+          _sectionTitle("Legal & About"),
+
+          _buildListTile(
+            icon: Icons.privacy_tip_outlined,
+            title: "Privacy Policy",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const WebPageScreen(
+                    title: "Privacy Policy",
+                    url: "https://www.privacypolicies.com/live/yourpolicy",
+                  ),
+                ),
+              );
+            },
+          ),
+
+          _buildListTile(
+            icon: Icons.description_outlined,
+            title: "Terms of Service",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const WebPageScreen(
+                    title: "Terms of Service",
+                    url: "https://www.privacypolicies.com/live/yourpolicy",
+                  ),
+                ),
+              );
+            },
+          ),
+
+          _buildListTile(
+            icon: Icons.support_agent_outlined,
+            title: "Help & Support",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const WebPageScreen(
+                    title: "Help & Support",
+                    url: "https://www.privacypolicies.com/live/yourpolicy",
+                  ),
+                ),
+              );
+            },
+          ),
+
           const SizedBox(height: 40),
-          const Center(
+
+          /// APP VERSION
+          Center(
             child: Text(
               "MokshaRide v1.0.0",
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 12,
+              ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  /// ------------------ SECTION TITLE ------------------
+
+  Widget _sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 10, top: 10),
+      padding: const EdgeInsets.only(left: 4, bottom: 12, top: 10),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.bold,
           color: Theme.of(context).colorScheme.primary,
           letterSpacing: 1.2,
@@ -71,6 +140,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       ),
     );
   }
+
+  /// ------------------ SWITCH TILE ------------------
 
   Widget _buildSwitchTile({
     required String title,
@@ -81,48 +152,69 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
   }) {
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: SwitchListTile(
-        secondary: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: Theme.of(context).colorScheme.onPrimaryContainer),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        secondary: _iconBox(icon),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(fontSize: 12),
+        ),
         value: value,
         onChanged: onChanged,
-        activeColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }
 
-  Widget _buildListTile(IconData icon, String title) {
+  /// ------------------ LIST TILE ------------------
+
+  Widget _buildListTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        leading: _iconBox(icon),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w500),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-        trailing: const Icon(Icons.chevron_right, size: 20),
-        onTap: () {
-          // TODO: Add Navigation to webviews or internal pages
-        },
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  /// ------------------ ICON BOX ------------------
+
+  Widget _iconBox(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        icon,
+        size: 22,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
 }
+
+
