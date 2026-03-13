@@ -43,7 +43,7 @@ String generateRideOtp() {
 await rideRef.set({
   'rideId': rideRef.id,
   'userId': user.uid,
-  'username': doc['name'],
+  'username': doc['name'] ?? 'user not set name',
 
   'pickupAddress': pickup,
   'pickupLat': pickupLat,
