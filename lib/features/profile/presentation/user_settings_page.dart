@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:moksharide_user/core/theme/theme_notifier.dart';
 import 'package:moksharide_user/features/profile/presentation/WebPageScreen.dart';
+import 'package:moksharide_user/features/support/presentation/pages/support_chat_page.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -98,10 +99,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const WebPageScreen(
-                    title: "Help & Support",
-                    url: "https://www.privacypolicies.com/live/yourpolicy",
-                  ),
+                  builder: (_) => const SupportChatPage()
                 ),
               );
             },
