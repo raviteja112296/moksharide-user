@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:moksharide_user/services/voice_support_service.dart';
 
 class IntroBottomSheet extends StatefulWidget {
   final ScrollController scrollController;
@@ -234,8 +235,9 @@ Container(
           icon: const Icon(Icons.call),
           color: Colors.green,
           onPressed: () {
-            // launch call
+            VoiceSupportService.callSupport();
           },
+          tooltip: 'Call Support',
         ),
       ),
 
