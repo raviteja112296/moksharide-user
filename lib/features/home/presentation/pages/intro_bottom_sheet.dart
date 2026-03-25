@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:moksharide_user/services/voice_support_service.dart';
 
@@ -39,7 +41,22 @@ class _IntroBottomSheetState extends State<IntroBottomSheet> {
       "icon": Icons.card_giftcard,
     },
   ];
+  Future<String?> getUserPhoneNumber() async {
+  final user = FirebaseAuth.instance.currentUser;
 
+  if (user == null) return null;
+
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .get();
+
+  final data = doc.data();
+
+  if (data == null) return null;
+
+  return data['phone']; // make sure field name is 'phone'
+}
   @override
   void dispose() {
     _pageController.dispose();
@@ -225,21 +242,42 @@ Container(
 
       /// SUPPORT
       ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.primary.withOpacity(0.1),
-          child: Icon(Icons.support_agent, color: theme.primary),
-        ),
-        title: const Text("24/7 Customer Support"),
-        subtitle: const Text("+91 98765 43210"),
-        trailing: IconButton(
-          icon: const Icon(Icons.call),
-          color: Colors.green,
-          onPressed: () {
-            VoiceSupportService.callSupport();
-          },
-          tooltip: 'Call Support',
-        ),
-      ),
+  leading: CircleAvatar(
+    backgroundColor: theme.primary.withOpacity(0.1),
+    child: Icon(Icons.support_agent, color: theme.primary),
+  ),
+  title: const Text("24/7 Customer Support"),
+  subtitle: const Text("+91 98765 43210"),
+  trailing: IconButton(
+    icon: const Icon(Icons.call),
+    color: Colors.green,
+    tooltip: 'Call Support',
+    onPressed: () async {
+      // try {
+      //   String? phone = await getUserPhoneNumber();
+
+      //   if (phone == null || phone.isEmpty) {
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       const SnackBar(
+      //         content: Text("Phone number not found. Please update your profile."),
+      //       ),
+      //     );
+      //     return;
+      //   }
+
+      //   await VoiceSupportService.callSupport(phone);
+        
+      // } catch (e) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(
+      //       content: Text("Something went wrong. Please try again."),
+      //     ),
+      //   );
+      // }
+      VoiceSupportService.callSupport("+919603832514");
+    },
+  ),
+),
 
       Divider(height: 1, indent: 70),
 
